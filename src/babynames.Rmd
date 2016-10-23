@@ -64,6 +64,10 @@ filter_name <- function(df, name_match) {
   subset(df, df$name == name_match)
 }
 
+gs <- function(fn) {
+  ggsave(fn, dpi = 96, width = 12.271, height = 8.75)
+}
+
 # Import data ----
 
 if(!file.exists(RDS)) {
@@ -110,7 +114,7 @@ top_decade <- decade %>%
 
 
 # Plots
-theme_set(theme_few(base_size = 11))
+ggthemr('light', layout = "clear", spacing = 1.5, text_size = 12)
 ```
 
 ```{r}
@@ -127,16 +131,19 @@ ggplot(last_letter, aes(year, percents, color = color, group = ends_1)) +
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank())
+gs("../img/male_female_base.png")
 ```
 
 ```{r}
 # Top Frequency by Decade
 ggplot(top_decade, aes(decade, percents, group = sex, colour = sex)) +
   geom_line() + 
-  geom_point() +
   scale_y_continuous(labels=percent) +
-  labs(y="% of Names", x = "Decade", title = "Proportion of Top Name as % of Total Population by Decade/Sex") +
+  labs(y="% of Names", x = "Decade", 
+       title = "Proportion of Top Name as % of Total Population by Decade/Sex") +
   geom_text(aes(label = str_to_title(name), y = percents  + (0.006 * adj )), nudge_x = 0.2, size =3)
+gs("../img/top_name_decade.png")
+
 ```
 
 
@@ -150,6 +157,7 @@ nlq <- an %>%
 ggplot(data=nlq, aes(year, colour = sex)) + 
   geom_line(aes(y = avg)) +
   labs(x = "Year", y = "Avg. Name Length")
+gs("../img/avg_name_length.png")
 ```
 
 
@@ -168,8 +176,10 @@ vowels <- an %>%
 
 ggplot(data=vowels, aes(year, wfrq, colour = sex)) + 
   geom_line() + 
-  labs(x="Year", y = "Frequency of Vowels in Name", title = "Proportion of names that are made of vowels (incl. Y)") +
+  labs(x="Year", y = "Frequency of Vowels in Name", title = "Rise of the Vowels
+Proportion of names that are made of vowels (incl. Y)") +
   scale_y_continuous(labels=percent)
+gs("../img/rise_of_vowels.png")
 ```
 
 ```{r}
@@ -186,7 +196,10 @@ fl_plot <- first_letter %>%
 
 ggplot(fl_plot, aes(year, percents, colour = first_letter)) + 
   geom_line() + 
-  facet_wrap( ~ sex)
+  facet_wrap( ~ sex) +
+  scale_y_continuous(labels=percent) + 
+  labs(color = "First Letter of Name", title = "Race to the top of the roll call")
+gs("../img/first_letter_name.png")
 ```
 
 ```{r}
@@ -225,9 +238,10 @@ ggplot(data=double_vowels, aes(year)) +
   geom_line(aes(y=has_aa, colour = "Has AA")) + 
   geom_line(aes(y=has_ee, colour = "Has EE")) +
   geom_line(aes(y=has_oo, colour = "Has OO")) +
-  facet_wrap(~ sex, nrow = 2) + 
-  labs(y = "Proportion of Names with Double Vowels",
+  facet_wrap(~ sex, nrow = 1) + 
+  labs(y = "Proportion of Names",
        title = "Rise of the AA/EE/OOs\nDouble Vowels in Names") +
   scale_y_continuous(labels=percent)
+gs("../img/double_vowels.png")
 ```
 
