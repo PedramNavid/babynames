@@ -1,3 +1,9 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, echo = F, message = F}
 library(jsonlite)
 library(dplyr)
 library(ggplot2)
@@ -105,7 +111,9 @@ top_decade <- decade %>%
 
 # Plots
 theme_set(theme_few(base_size = 11))
+```
 
+```{r}
 # Last letter trend
 ggplot(last_letter, aes(year, percents, color = color, group = ends_1)) + 
   geom_line() +
@@ -119,7 +127,9 @@ ggplot(last_letter, aes(year, percents, color = color, group = ends_1)) +
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank())
+```
 
+```{r}
 # Top Frequency by Decade
 ggplot(top_decade, aes(decade, percents, group = sex, colour = sex)) +
   geom_line() + 
@@ -127,8 +137,10 @@ ggplot(top_decade, aes(decade, percents, group = sex, colour = sex)) +
   scale_y_continuous(labels=percent) +
   labs(y="% of Names", x = "Decade", title = "Proportion of Top Name as % of Total Population by Decade/Sex") +
   geom_text(aes(label = str_to_title(name), y = percents  + (0.006 * adj )), nudge_x = 0.2, size =3)
+```
 
 
+```{r}
 # Name length
 nlq <- an %>% 
   group_by(sex,year) %>% 
@@ -138,3 +150,84 @@ nlq <- an %>%
 ggplot(data=nlq, aes(year, colour = sex)) + 
   geom_line(aes(y = avg)) +
   labs(x = "Year", y = "Avg. Name Length")
+```
+
+
+```{r}
+# Vowel counter
+
+vowels <- an %>% 
+  group_by(sex, year) %>% 
+  mutate(v_cnt = str_count(name, "[AEIOUY]"),
+         v_freq = v_cnt / name_length) %>% 
+  group_by(sex, year) %>% 
+  mutate(weighted_cnt = v_cnt * percents,
+            weighted_freq = v_freq * percents) %>% 
+  summarise(wcnt = sum(weighted_cnt),
+            wfrq = sum(weighted_freq))
+
+ggplot(data=vowels, aes(year, wfrq, colour = sex)) + 
+  geom_line() + 
+  labs(x="Year", y = "Frequency of Vowels in Name", title = "Proportion of names that are made of vowels (incl. Y)") +
+  scale_y_continuous(labels=percent)
+```
+
+```{r}
+# First Letter
+first_letter <- an %>% 
+  mutate(first_letter = str_sub(name, 1, 1)) %>% 
+  group_by(sex, year, first_letter) %>% 
+  summarise(freq = sum(frequency)) %>% 
+  group_by(sex, year) %>% 
+  mutate(percents = freq / sum(freq))
+
+fl_plot <- first_letter %>% 
+  filter(first_letter %in% c('A', 'E', 'I'))
+
+ggplot(fl_plot, aes(year, percents, colour = first_letter)) + 
+  geom_line() + 
+  facet_wrap( ~ sex)
+```
+
+```{r}
+# K and C
+kc <- an %>% 
+  mutate(has_k = str_detect(name, 'K') * frequency, 
+         has_c = str_detect(name, 'C') * frequency) %>% 
+  group_by(sex, year) %>% 
+  summarise(has_k = sum(has_k),
+            has_c = sum(has_c),
+            total = sum(frequency)) %>% 
+  mutate(has_k  = has_k / total,
+         has_c = has_c / total)
+
+ggplot(data=filter(kc, sex == 'female'), aes(year)) + 
+  geom_line(aes(y=has_k, colour = "Has K")) + 
+  geom_line(aes(y=has_c, colour = "Has C")) +
+  scale_x_continuous(limits = c(1940,2010))
+```
+
+```{r}
+double_vowels <- an %>% 
+  mutate(has_aa = str_detect(name, 'AA') * frequency, 
+         has_ee = str_detect(name, 'EE') * frequency,
+         has_oo = str_detect(name, 'OO') * frequency) %>% 
+  group_by(sex, year) %>% 
+  summarise(has_aa = sum(has_aa),
+            has_ee = sum(has_ee),
+            has_oo = sum(has_oo),
+            total = sum(frequency)) %>% 
+  mutate(has_aa = has_aa / total,
+         has_ee = has_ee / total,
+         has_oo = has_oo / total)
+
+ggplot(data=double_vowels, aes(year)) + 
+  geom_line(aes(y=has_aa, colour = "Has AA")) + 
+  geom_line(aes(y=has_ee, colour = "Has EE")) +
+  geom_line(aes(y=has_oo, colour = "Has OO")) +
+  facet_wrap(~ sex) + 
+  labs(y = "Proportion of Names with Double Vowels",
+       title = "Rise of the AA/EE/OOs\nDouble Vowels in Names") +
+  scale_y_continuous(labels=percent)
+```
+
