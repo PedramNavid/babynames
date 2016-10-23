@@ -9,10 +9,10 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 library(ggthemes)
-
+library(scales)
 # Globals ---- 
 
-API_KEY = readLines("apikey.txt", warn = F) # Namara.io API key
+API_KEY = readLines("../apikey.txt", warn = F) # Namara.io API key
 DATA_SET_ID_F  = "5149f141-b653-4e91-86f9-14e7f33e7830"
 DATA_SET_ID_M = "b0eeaeb2-bf54-4de6-8a0f-d2fda674284b"
 
@@ -23,7 +23,7 @@ URL_F = paste0("http://api.namara.io/v0/data_sets/",
                DATA_SET_ID_F, "/data/en-4?api_key=", API_KEY)
 
 # Cache dataset
-RDS = "rds/baby_names.rds" 
+RDS = "../rds/baby_names.rds" 
 
 # Functions ----
 get_api_data <- function(URL, max = 1e06, verbose = TRUE) {
@@ -225,7 +225,7 @@ ggplot(data=double_vowels, aes(year)) +
   geom_line(aes(y=has_aa, colour = "Has AA")) + 
   geom_line(aes(y=has_ee, colour = "Has EE")) +
   geom_line(aes(y=has_oo, colour = "Has OO")) +
-  facet_wrap(~ sex) + 
+  facet_wrap(~ sex, nrow = 2) + 
   labs(y = "Proportion of Names with Double Vowels",
        title = "Rise of the AA/EE/OOs\nDouble Vowels in Names") +
   scale_y_continuous(labels=percent)
