@@ -33,6 +33,31 @@ get_api_data <- function(URL, max = 1e06, verbose = TRUE) {
   df
 }
 
+add_freq <- function(df) {
+  df %>% 
+    group_by(year) %>% 
+    mutate(percents = frequency / sum(frequency)) %>% 
+    arrange(name, year) %>% 
+    group_by(name) %>% 
+    mutate(rel_risk = percents / lag(percents),
+           rel_loss = (1 - round(rel_risk,2)) * 100) %>% 
+    mutate(ends_1 = str_sub(name, -1, -1),
+           ends_2 = str_sub(name, -2, -1),
+           ends_3 = str_sub(name, -3, -1),
+           name_length = nchar(name))
+}
+
+plot_single_name <- function(df, name_match) {
+  x <- subset(df, df$name == name_match)
+  ggplot(x, aes_q(quote(year), quote(percents), colour = quote(sex))) + 
+    geom_line() +
+    scale_y_continuous(labels=percent) 
+}
+
+filter_name <- function(df, name_match) {
+  subset(df, df$name == name_match)
+}
+
 # Import data ----
 
 if(!file.exists(RDS)) {
@@ -40,23 +65,6 @@ if(!file.exists(RDS)) {
   female_names <- get_api_data(URL_F)
   save(male_names, female_names, file = RDS)
 } else load(RDS)
-
-
-
-# Build a function to get year / frequency / risk
-
-add_freq <- function(df) {
-  df %>% 
-    group_by(year) %>% 
-    mutate(percents = frequency / sum(frequency)) %>% 
-    arrange(name, year) %>% 
-    group_by(name) %>% 
-    mutate(rel_risk = percents / lag(percents, order_by = year),
-           rel_loss = 1 - round(rel_risk,2) * 100) %>% 
-    mutate(ends_1 = str_sub(name, -1, -1),
-           ends_2 = str_sub(name, -2, -1),
-           ends_3 = str_sub(name, -3, -1))
-}
 
 mn <- add_freq(male_names)
 fn <- add_freq(female_names)
@@ -79,9 +87,26 @@ color = case_when(
 
 last_letter$color = color
 
+# Create decade table
+an$decade <- cut(an$year, breaks = seq(1901,2021,10), 
+                 include.lowest = TRUE, right = F, 
+                 labels = seq(1900,2010,10))
+decade <- an %>% 
+  group_by(sex, decade, name) %>% 
+  summarise(frequency = sum(frequency)) %>% 
+  group_by(sex, decade) %>% 
+  mutate(percents = frequency / sum(frequency))
+
+top_decade <- decade %>% 
+  group_by(sex, decade) %>% 
+  top_n(1, wt = percents) %>% 
+  mutate(adj = ifelse(sex == 'male', 1, -1))
+
+
 # Plots
 theme_set(theme_few(base_size = 11))
 
+# Last letter trend
 ggplot(last_letter, aes(year, percents, color = color, group = ends_1)) + 
   geom_line() +
   facet_wrap(~ sex) +
@@ -95,4 +120,21 @@ ggplot(last_letter, aes(year, percents, color = color, group = ends_1)) +
         panel.grid.minor.x = element_blank(),
         panel.grid.minor.y = element_blank())
 
+# Top Frequency by Decade
+ggplot(top_decade, aes(decade, percents, group = sex, colour = sex)) +
+  geom_line() + 
+  geom_point() +
+  scale_y_continuous(labels=percent) +
+  labs(y="% of Names", x = "Decade", title = "Proportion of Top Name as % of Total Population by Decade/Sex") +
+  geom_text(aes(label = str_to_title(name), y = percents  + (0.006 * adj )), nudge_x = 0.2, size =3)
 
+
+# Name length
+nlq <- an %>% 
+  group_by(sex,year) %>% 
+  summarise(avg = mean(name_length), 
+            sd = sd(name_length))
+
+ggplot(data=nlq, aes(year, colour = sex)) + 
+  geom_line(aes(y = avg)) +
+  labs(x = "Year", y = "Avg. Name Length")
